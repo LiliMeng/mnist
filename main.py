@@ -14,13 +14,19 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from utils import weight_init
 from utils import save_checkpoint
-
+from skimage.segmentation import slic
+from skimage.segmentation import mark_boundaries
+from skimage.util import img_as_float
+import matplotlib.pyplot as plt
+import numpy as np
+import argparse
+import cv2
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', type=int, default=1, metavar='N',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
+parser.add_argument('--test-batch-size', type=int, default=1, metavar='N',
                     help='input batch size for testing (default: 1000)')
 parser.add_argument('--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -48,13 +54,13 @@ train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data', train=True, download=True,
                    transform=transforms.Compose([
                        transforms.ToTensor(),
-                       transforms.Normalize((0.1307,), (0.3081,))
+                       #transforms.Normalize((0.1307,), (0.3081,))
                    ])),
     batch_size=args.batch_size, shuffle=True, **kwargs)
 test_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data', train=False, transform=transforms.Compose([
                        transforms.ToTensor(),
-                       transforms.Normalize((0.1307,), (0.3081,))
+                       #transforms.Normalize((0.1307,), (0.3081,))
                    ])),
     batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
@@ -72,6 +78,7 @@ def tconv( inp_chl, out_chl, ker_size = 4, stride = 2, padding = 1 ):
         nn.BatchNorm2d( out_chl ),
         nn.ReLU( True ),
         )
+
 
 class Classification_Net( nn.Module ):
     def __init__(self):
@@ -93,8 +100,7 @@ class Classification_Net( nn.Module ):
         pred0 = self.fc1( f )
        
         return x0, x1, x2, pred0
-        #return F.log_softmax(pred0, dim=1)
-
+      
 class Regression_Net( nn.Module ):
     def __init__(self):
         super().__init__()
@@ -136,70 +142,63 @@ class Mask_Net( nn.Module ):
 
         x0, x1, x2, pred1 = self.cls( x )
 
-        #return pred0, pred1, mask
-        return F.log_softmax(pred1, dim=1), mask 
+        return pred0, pred1, mask
 
+train_cls_only = False
+train_reg_only = False
+eval_superpixel = True
 
-
-use_cls_net = False
-use_reg_net = False
-use_mask_net = True
-
-if use_cls_net == True:
-    model = Classification_Net()
-elif use_reg_net == True:
-    model = Regression_Net()
-elif use_mask_net == True:
-    model = Mask_Net()
-else:
-    raise Exception("Not imeplemented yet")
-
+model = Mask_Net()
 if args.cuda:
     model.cuda()
 
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+optimizer_cls = optim.SGD(model.cls.parameters(), lr = args.lr, momentum=args.momentum)
+optimizer_reg = optim.SGD(model.reg.parameters(), lr = args.lr, momentum=args.momentum)
 
-
-       
-def train_reg(epoch):
+def train_cls(epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         if args.cuda:
             data, target = data.cuda(), target.cuda()
         data, target = Variable(data), Variable(target)
-      
-        optimizer.zero_grad()
-        if use_cls_net == True:
-            x0, x1, x2, pred0 = model(data)
-            output = F.log_softmax(pred0, dim=1)
-        elif use_reg_net == True:
-            restored_model = torch.load('./checkpoint.pth.tar')
-            x0, x1, x2, pred0 = restored_model(data)
-            output = model(x0, x1, x2)
-        elif use_mask_net == True:
-            pretrained_model = torch.load('./saved_checkpoints/checkpoint.pth.tar')['model']
-            #print("pretrained_model")
-            #print(pretrained_model)
-            new_model_dict = model.state_dict()
-            for k, v in pretrained_model:
-                new_model_dict [k] = v
-            model.load_state_dict(new_model_dict)
-            output, mask = model(data)
-        else:
-            raise Exception("Not implemented yet")
+        optimizer_cls.zero_grad()
+        x0, x1, x2, pred0 = model.cls(data)
+        output = F.log_softmax(pred0, dim=1)
 
-        
         loss = F.nll_loss(output, target)
         loss.backward()
-        optimizer.step()
+        optimizer_cls.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.data[0]))
+       
+def train_reg(epoch):
+    model.train()
+    saved_checkpoint = torch.load('./saved_checkpoints/checkpoint.pth.tar')
+    model.load_state_dict( saved_checkpoint['model'] )
+    for batch_idx, (data, target) in enumerate(train_loader):
+        if args.cuda:
+            data, target = data.cuda(), target.cuda()
+        data, target = Variable(data), Variable(target)
+      
+        optimizer_reg.zero_grad()
+        pred0, pred1, mask = model(data)    
+        
+        output = F.log_softmax(pred1, dim=1)
+        output0 = F.log_softmax(pred0, dim=1)
+        loss = F.nll_loss(output, target)
+        loss0 = F.nll_loss(output0, target)
+        loss.backward()
+        optimizer_reg.step()
+        if batch_idx % args.log_interval == 0:
+            #print('loss0', loss0)
+           # print('mask mean',mask.mean())
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                epoch, batch_idx * len(data), len(train_loader.dataset),
+                100. * batch_idx / len(train_loader), loss.data[0]))
 
-    
-
-def test():
+def eval_cls():
     model.eval()
     test_loss = 0
     correct = 0
@@ -207,58 +206,132 @@ def test():
         if args.cuda:
             data, target = data.cuda(), target.cuda()
         data, target = Variable(data, volatile=True), Variable(target)
-        if use_cls_net == True:
-            x0, x1, x2, pred0 = model(data)
-            output = F.log_softmax(pred0, dim=1)
-        elif use_reg_net == True:
-            restored_model = torch.load('./checkpoint.pth.tar')
-            x0, x1, x2, pred0 = restored_model(data)
-            output = model(x0, x1, x2)
-        else:
-            raise Exception("Not implemented yet")
-
-        #for pic, img in zip(mask.mask, batch[0]):
-        # img = data[0]
-        # img = img.type(torch.FloatTensor).data
-        # img = img.numpy()
-        # img = img.transpose( 1, 2, 0 )
-        # #mean = np.array([x/255.0 for x in [125.3, 123.0, 113.9]])
-        # #std  = np.array([x/255.0 for x in [63.0, 62.1, 66.7]])
-        # #img = (img * std + mean) * 255
-        # img = img.astype(np.uint8)
-
-        # pic = pic[0].type( torch.FloatTensor )
-        # print(pic)
-        # print(pic.max())
-        # print(pic.min())
-        # print(pic.mean())
-        # pic = pic.data.numpy()
-        # pic -= pic.min()
-        # pic /= pic.max()
-        # pic *= 255
-        # pic = pic.astype( np.uint8 )
-        # pic = cv2.applyColorMap( pic, cv2.COLORMAP_JET )
-        # cv2.imshow('x', pic)
-        # cv2.imshow('y', img)
-        # cv2.waitKey(0)
-        test_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
-        pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
+        x0, x1, x2, pred0 = model.cls(data)
+        output = F.log_softmax(pred0, dim=1)
+        test_loss += F.nll_loss(output, target, size_average=False).data[0]
+        pred = output.data.max(1, keepdim=True)[1]
         correct += pred.eq(target.data.view_as(pred)).long().cpu().sum()
+       
+    test_loss /= len(test_loader.dataset)
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+        test_loss, correct, len(test_loader.dataset),
+        100. * correct / len(test_loader.dataset)))
 
+def eval_superpixel():
+    model.eval()
+    saved_checkpoint = torch.load('./saved_checkpoints/checkpoint.pth.tar')
+    model.load_state_dict( saved_checkpoint['model'] )
+   
+    for data, target in test_loader:
+        if args.cuda:
+            data, target = data.cuda(), target.cuda()
+        data, target = Variable(data, volatile=True), Variable(target)
+        print("data.shape")
+        print(data.shape)
+        img = data[0]
+        img = img.type(torch.FloatTensor).data
+        img = img.numpy()
+        img = img.transpose( 1, 2, 0 )
+        mean = np.array([x/255.0 for x in [125.3, 123.0, 113.9]])
+        std  = np.array([x/255.0 for x in [63.0, 62.1, 66.7]])
+        img = (img * std + mean) * 255
+        img = img.astype(np.uint8)
+        segments = slic(img_as_float(img), n_segments = 50, sigma = 5)
+     
+        cv2.imshow('superpixel', mark_boundaries(img_as_float(img), segments))
+        cv2.imshow('original_img', img)
+        cv2.waitKey(0)
+
+      
+        x0, x1, x2, pred0 = model.cls(data)
+        output = F.log_softmax(pred0, dim=1)
+        print(output)
+
+
+
+def eval_reg_show():
+    model.eval()
+    test_loss = 0
+    correct = 0
+    for data, target in test_loader:
+        if args.cuda:
+            data, target = data.cuda(), target.cuda()
+        data, target = Variable(data, volatile=True), Variable(target)
+        pred0, pred1, mask = model(data)
+        img = data[0]
+        img = img.type(torch.FloatTensor).data
+        img = img.numpy()
+        img = img.transpose( 1, 2, 0 )
+        mean = np.array([x/255.0 for x in [125.3, 123.0, 113.9]])
+        std  = np.array([x/255.0 for x in [63.0, 62.1, 66.7]])
+        img = (img * std + mean) * 255
+        img = img.astype(np.uint8)
+    
+        pic = mask[0].type( torch.FloatTensor )
+   
+        pic = pic.data.numpy()
+        pic -= pic.min()
+        pic /= pic.max()
+        pic *= 255
+        print(type(pic))
+        
+        pic =pic.transpose(1, 2, 0)
+        print(pic.shape)
+        pic = np.array(pic, dtype = np.uint8)
+
+        pic = cv2.applyColorMap(pic, cv2.COLORMAP_JET )
+        cv2.imshow('x', pic)
+        cv2.imshow('y', img)
+        cv2.waitKey(0)
+        output = F.log_softmax(pred1, dim=1)
+        test_loss += F.nll_loss(output, target, size_average=False).data[0]
+        pred = output.data.max(1, keepdim=True)[1]
+        correct += pred.eq(target.data.view_as(pred)).long().cpu().sum()
+       
     test_loss /= len(test_loader.dataset)
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
 
+def eval_reg():
+    model.eval()
+    test_loss = 0
+    correct = 0
+    for data, target in test_loader:
+        if args.cuda:
+            data, target = data.cuda(), target.cuda()
+        data, target = Variable(data, volatile=True), Variable(target)
+        pred0, pred1, mask = model(data)
+       
+        output = F.log_softmax(pred1, dim=1)
+        test_loss += F.nll_loss(output, target, size_average=False).data[0]
+        pred = output.data.max(1, keepdim=True)[1]
+        correct += pred.eq(target.data.view_as(pred)).long().cpu().sum()
+       
+    test_loss /= len(test_loader.dataset)
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+        test_loss, correct, len(test_loader.dataset),
+        100. * correct / len(test_loader.dataset)))
+
 for epoch in range(1, args.epochs + 1):
-    train_reg(epoch)
-   # test()
-if use_cls_net == True:
-    save_checkpoint({
-                'epoch': epoch,
-                'model': model.state_dict(),
-            }, is_best=False, save_folder="saved_checkpoints" , filename='checkpoint.pth.tar')
-else:
-    print("No need to store model")
+ 
+    if train_cls_only == True:
+        train_cls(epoch)
+        eval_cls()
+        save_checkpoint({
+                    'epoch': epoch,
+                    'model': model.state_dict(),
+                    'optimizer_cls': optimizer_cls.state_dict(),
+                    'optimizer_reg': optimizer_reg.state_dict(),
+                }, is_best=False, save_folder="saved_checkpoints" , filename='checkpoint.pth.tar')
+    
+    elif train_reg_only == True:
+        train_reg(epoch)
+        eval_reg()
+    elif eval_superpixel:
+        eval_superpixel()
+    else:
+        print("No need to store model")
+eval_reg_show()
 #torch.save(model, 'checkpoint.pth.tar')
