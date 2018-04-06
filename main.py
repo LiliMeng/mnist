@@ -141,16 +141,16 @@ class Mask_Net( nn.Module ):
 
 
 
-use_cls_net = True
+use_cls_net = False
 use_reg_net = False
-use_mask_net = False
+use_mask_net = True
 
 if use_cls_net == True:
     model = Classification_Net()
 elif use_reg_net == True:
     model = Regression_Net()
 elif use_mask_net == True:
-    model = Mask_net()
+    model = Mask_Net()
 else:
     raise Exception("Not imeplemented yet")
 
@@ -177,7 +177,9 @@ def train_reg(epoch):
             x0, x1, x2, pred0 = restored_model(data)
             output = model(x0, x1, x2)
         elif use_mask_net == True:
-            pretrained_model = torch.load('./checkpoint.pth.tar')['state_dict']
+            pretrained_model = torch.load('./saved_checkpoints/checkpoint.pth.tar')['model']
+            #print("pretrained_model")
+            #print(pretrained_model)
             new_model_dict = model.state_dict()
             for k, v in pretrained_model:
                 new_model_dict [k] = v
@@ -252,8 +254,11 @@ def test():
 for epoch in range(1, args.epochs + 1):
     train_reg(epoch)
    # test()
+if use_cls_net == True:
     save_checkpoint({
                 'epoch': epoch,
                 'model': model.state_dict(),
             }, is_best=False, save_folder="saved_checkpoints" , filename='checkpoint.pth.tar')
+else:
+    print("No need to store model")
 #torch.save(model, 'checkpoint.pth.tar')
