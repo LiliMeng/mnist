@@ -55,10 +55,10 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum /self.count
 
-def save_checkpoint(model, is_best, save_folder, filename = 'checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, save_folder, filename = 'checkpoint.pth.tar'):
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder)
-    torch.save(model, save_folder + '/' + filename)
+    torch.save(state, save_folder + '/' + filename)
     if is_best:
         shutil.copyfile(save_folder + '/' + filename,
                         save_folder + '/' + 'model_best.pth.tar')
