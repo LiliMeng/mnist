@@ -5,6 +5,7 @@ from skimage.color import gray2rgb, rgb2gray, label2rgb # since the code wants c
 from sklearn.datasets import fetch_mldata
 import cv2
 from nn_train_eval import train_cls, eval_cls
+from utils import save_checkpoint
 
 use_random_forest = False
 use_neural_networks = True
@@ -23,6 +24,7 @@ from sklearn.preprocessing import Normalizer
 from skimage.segmentation import felzenszwalb, slic, quickshift, watershed
 from skimage.segmentation import mark_boundaries
 from ImageExplanation import *
+
 
 class PipeStep(object):
 	"""
