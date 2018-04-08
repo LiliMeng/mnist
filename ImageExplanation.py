@@ -8,7 +8,7 @@ import sklearn
 import sklearn.preprocessing
 from sklearn.utils import check_random_state
 from skimage.color import gray2rgb
-
+import lime_base
 
 class ImageExplanation(object):
     def __init__(self, image, segments):
@@ -100,9 +100,9 @@ class LimeImageExplainer(object):
         def kernel(d):
             return np.sqrt(np.exp(-(d **2 ) / kernel_width ** 2))
 
-            self.random_state = check_random_state(random_state)
-            self.feature_selection = feature_selection
-            self.base = lime_base.LimeBase(kenrel, verbose, random_state=self.random_state)
+        self.random_state = check_random_state(random_state)
+        self.feature_selection = feature_selection
+        self.base = lime_base.LimeBase(kernel, verbose, random_state=self.random_state)
 
     def explain_instance(self, image, classifier_fn, labels=(1,),
                         hide_color=None,
