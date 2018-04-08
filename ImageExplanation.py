@@ -9,7 +9,7 @@ import sklearn.preprocessing
 from sklearn.utils import check_random_state
 from skimage.color import gray2rgb
 import lime_base
-
+from skimage.segmentation import felzenszwalb, slic, quickshift, watershed
 class ImageExplanation(object):
     def __init__(self, image, segments):
         """Init function.
@@ -151,10 +151,11 @@ class LimeImageExplainer(object):
             random_seed = self.random_state.randint(0, high=1000)
 
         if segmentation_fn is None:
-            segmentation_fn = slic(img, n_segments=50, compactness=10, sigma=1)
+            segmentation_fn = slic(image, n_segments=50, compactness=10, sigma=1)
 
         try:
-            segments = segmentation_fn(image)
+            print(image.shape)
+            segments = slic(image, n_segments=50, compactness=10, sigma=1)
         except ValueError as e:
             raise e
 
