@@ -4,6 +4,7 @@ from skimage.color import gray2rgb, rgb2gray, label2rgb # since the code wants c
 
 from sklearn.datasets import fetch_mldata
 import cv2
+from nn_train_eval import *
 mnist = fetch_mldata('MNIST original')
 
 # make each image color so lim image works correctly
@@ -41,10 +42,24 @@ simple_rf_pipeline = Pipeline([
 
 from sklearn.model_selection import train_test_split
 
-X_train, X_test, y_train, y_test = train_test_split(X_vec, y_vec,
-                                                    train_size=0.55)
-simple_rf_pipeline.fit(X_train, y_train)
-img = X_test[0]
+if random_forest == True:
+
+	X_train, X_test, y_train, y_test = train_test_split(X_vec, y_vec,
+	                                                    train_size=0.55)
+	simple_rf_pipeline.fit(X_train, y_train)
+	img = X_test[0]
+elif neural_networks == True:
+	for epoch in range(1, 11):
+		train_cls(epoch)
+   	 	eval_cls()
+        save_checkpoint({
+                    'epoch': epoch,
+                    'model': model.state_dict(),
+                }, is_best=False, save_folder="saved_checkpoints" , filename='checkpoint.pth.tar')
+    
+
+else:
+	raise Exception("not implemented yet")
 
 segmenter = slic(img, n_segments=50, compactness=10, sigma=1)
 
