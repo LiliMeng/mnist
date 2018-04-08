@@ -4,7 +4,7 @@ from skimage.color import gray2rgb, rgb2gray, label2rgb # since the code wants c
 
 from sklearn.datasets import fetch_mldata
 import cv2
-from nn_train_eval import *
+from nn_train_eval import train_cls, eval_cls
 
 use_random_forest = False
 use_neural_networks = True
@@ -52,11 +52,12 @@ if use_random_forest == True:
 	                                                    train_size=0.55)
 	simple_rf_pipeline.fit(X_train, y_train)
 	img = X_test[0]
+
 elif use_neural_networks == True:
 	for epoch in range(1, 11):
 		train_cls(epoch)
-   	 	eval_cls()
-        save_checkpoint({
+		eval_cls()
+		save_checkpoint({
                     'epoch': epoch,
                     'model': model.state_dict(),
                 }, is_best=False, save_folder="saved_checkpoints" , filename='checkpoint.pth.tar')
@@ -79,7 +80,7 @@ elif use_neural_networks == True:
                                          top_labels=10, hide_color=0, num_samples=10000, segmentation_fn=segmenter)
 else:
 	raise Exception("Not implemented yet")
-	
+
 fig, m_axs = plt.subplots(2,5, figsize = (12,6))
 
 for i, c_ax in enumerate(m_axs.flatten()):

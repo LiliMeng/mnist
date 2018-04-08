@@ -235,6 +235,7 @@ class LimeImageExplainer(object):
             
             if len(imgs) == batch_size:
                 preds = classifier_fn(np.array(imgs))
+                print(preds)
                 labels.extend(preds)
                 imgs = []
         if len(imgs) > 0:
