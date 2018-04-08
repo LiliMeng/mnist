@@ -56,10 +56,11 @@ explanation = explainer.explain_instance(X_vec[0],
                                          classifier_fn = simple_rf_pipeline.predict_proba, 
                                          top_labels=10, hide_color=0, num_samples=10000, segmentation_fn=segmenter)
 
+fig, m_axs = plt.subplots(2,5, figsize = (12,6))
 
-temp, mask = explanation.get_image_and_mask(y_vec[0], positive_only=True, num_features=10, hide_rest=False, min_weight = 0.01)
-
-
-
-cv2.imshow('Positive for {}'.format(y_test[0]), label2rgb(mask,X_test[0], bg_label = 0))
-cv2.waitKey(0)
+for i, c_ax in enumerate(m_axs.flatten()):
+    temp, mask = explanation.get_image_and_mask(i, positive_only=True, num_features=10, hide_rest=False, min_weight = 0.01 )
+    cv2.imshow('mask for {}'.format(i), mask*255*255)
+    cv2.imshow('orginal_img', X_test[0])
+    #cv2.imshow('Positive for {}\nActual {}'.format(i, y_test[0]), label2rgb(mask,X_test[0], bg_label = 0))
+    cv2.waitKey(0)
