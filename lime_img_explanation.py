@@ -45,7 +45,7 @@ X_train, X_test, y_train, y_test = train_test_split(X_vec, y_vec,
                                                     train_size=0.55)
 simple_rf_pipeline.fit(X_train, y_train)
 img = X_test[0]
-#segmenter= quickshift(img, kernel_size=1, max_dist=20, ratio=0.2)
+
 segmenter = slic(img, n_segments=50, compactness=10, sigma=1)
 
 #cv2.imshow('segmented_img', mark_boundaries(img, segmenter))
@@ -56,7 +56,15 @@ explanation = explainer.explain_instance(X_vec[0],
                                          classifier_fn = simple_rf_pipeline.predict_proba, 
                                          top_labels=10, hide_color=0, num_samples=10000, segmentation_fn=segmenter)
 
-temp, mask = explanation.get_image_and_mask(y_vec[0], positive_only=True, num_features=10, hide_rest=False, min_weight = 0.01)
+# for i, c_ax in enumerate(m_axs.flatten()):
+# 	temp, mask = explanation.get_image_and_mask(y_vec[0], positive_only=True, num_features=10, hide_rest=False, min_weight = 0.01)
 
-cv2.imshow('mask', mask)
-cv2.waitKey(0)
+
+
+# 	cv2.imshow('Positive for {}\nActual {}'.format(i, y_test[0]), label2rgb(mask,X_test[0], bg_label = 0))
+# 	cv2.waitKey(0)
+fig, m_axs = plt.subplots(2,5, figsize = (12,6))
+for i, c_ax in enumerate(m_axs.flatten()):
+    temp, mask = explanation.get_image_and_mask(i, positive_only=True, num_features=10, hide_rest=True, min_weight = 0.01 )
+    cv2.imshow('Positive for {}\nActual {}'.format(i, y_test[0]), label2rgb(mask,X_test[0], bg_label = 0))
+    cv2.waitKey(0)
