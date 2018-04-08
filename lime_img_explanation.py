@@ -5,6 +5,10 @@ from skimage.color import gray2rgb, rgb2gray, label2rgb # since the code wants c
 from sklearn.datasets import fetch_mldata
 import cv2
 from nn_train_eval import *
+
+use_random_forest = False
+use_neural_networks = True
+
 mnist = fetch_mldata('MNIST original')
 
 # make each image color so lim image works correctly
@@ -42,13 +46,13 @@ simple_rf_pipeline = Pipeline([
 
 from sklearn.model_selection import train_test_split
 
-if random_forest == True:
+if use_random_forest == True:
 
 	X_train, X_test, y_train, y_test = train_test_split(X_vec, y_vec,
 	                                                    train_size=0.55)
 	simple_rf_pipeline.fit(X_train, y_train)
 	img = X_test[0]
-elif neural_networks == True:
+elif use_neural_networks == True:
 	for epoch in range(1, 11):
 		train_cls(epoch)
    	 	eval_cls()
@@ -56,8 +60,6 @@ elif neural_networks == True:
                     'epoch': epoch,
                     'model': model.state_dict(),
                 }, is_best=False, save_folder="saved_checkpoints" , filename='checkpoint.pth.tar')
-    
-
 else:
 	raise Exception("not implemented yet")
 
@@ -67,10 +69,17 @@ segmenter = slic(img, n_segments=50, compactness=10, sigma=1)
 #cv2.waitKey(0)
 
 explainer = LimeImageExplainer(verbose = False)
-explanation = explainer.explain_instance(X_vec[0], 
+if use_neural_networks == True:
+	explanation = explainer.explain_instance(X_vec[0], 
+	                                         classifier_fn = simple_rf_pipeline.predict_proba, 
+	                                         top_labels=10, hide_color=0, num_samples=10000, segmentation_fn=segmenter)
+elif use_neural_networks == True:
+	explanation = explainer.explain_instance(X_vec[0], 
                                          classifier_fn = simple_rf_pipeline.predict_proba, 
                                          top_labels=10, hide_color=0, num_samples=10000, segmentation_fn=segmenter)
-
+else:
+	raise Exception("Not implemented yet")
+	
 fig, m_axs = plt.subplots(2,5, figsize = (12,6))
 
 for i, c_ax in enumerate(m_axs.flatten()):
