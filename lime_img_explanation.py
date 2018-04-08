@@ -10,8 +10,7 @@ mnist = fetch_mldata('MNIST original')
 X_vec = np.stack([gray2rgb(iimg) for iimg in mnist.data.reshape((-1, 28, 28))], 0)
 y_vec = mnist.target.astype(np.uint8)
 
-cv2.imshow('Label: {}'.format(y_vec[0]), X_vec[0])
-cv2.waitKey(0)
+
 
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
@@ -39,19 +38,25 @@ simple_rf_pipeline = Pipeline([
 	('Flatten Image', flatten_step),
 	('RF', RandomForestClassifier())])
 
-img = X_vec[0]
 
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X_vec, y_vec,
+                                                    train_size=0.55)
+simple_rf_pipeline.fit(X_train, y_train)
+img = X_test[0]
 #segmenter= quickshift(img, kernel_size=1, max_dist=20, ratio=0.2)
 segmenter = slic(img, n_segments=50, compactness=10, sigma=1)
 
-cv2.imshow('segmented_img', mark_boundaries(img, segmenter))
-cv2.waitKey(0)
+#cv2.imshow('segmented_img', mark_boundaries(img, segmenter))
+#cv2.waitKey(0)
 
 explainer = LimeImageExplainer(verbose = False)
 explanation = explainer.explain_instance(X_vec[0], 
                                          classifier_fn = simple_rf_pipeline.predict_proba, 
                                          top_labels=10, hide_color=0, num_samples=10000, segmentation_fn=segmenter)
-explanation = explanation.ImageExplanation(img, segmenter)
+
 temp, mask = explanation.get_image_and_mask(y_vec[0], positive_only=True, num_features=10, hide_rest=False, min_weight = 0.01)
 
 cv2.imshow('mask', mask)
+cv2.waitKey(0)

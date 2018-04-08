@@ -183,22 +183,6 @@ class LimeImageExplainer(object):
 
         ret_exp = ImageExplanation(image, segments)
         if top_labels:
-            top = np.argsort()
-
-        top = labels
-
-        data, labels = self.data_labels(image, fudged_image, segments,
-                                        classifier_fn, num_samples,
-                                        batch_size=batch_size)
-
-        distances = sklearn.metrics.pairwise_distances(
-            data,
-            data[0].reshape(1, -1),
-            metric=distance_metric
-        ).ravel()
-
-        ret_exp = ImageExplanation(image, segments)
-        if top_labels:
             top = np.argsort(labels[0])[-top_labels:]
             ret_exp.top_labels = list(top)
             ret_exp.top_labels.reverse()
@@ -207,9 +191,10 @@ class LimeImageExplainer(object):
              ret_exp.local_exp[label],
              ret_exp.score, ret_exp.local_pred) = self.base.explain_instance_with_data(
                 data, labels, distances, label, num_features,
-                model_regressor= model_regressor,
+                model_regressor=model_regressor,
                 feature_selection=self.feature_selection)
         return ret_exp
+
 
     def data_labels(self,
                     image,
@@ -247,6 +232,7 @@ class LimeImageExplainer(object):
                 mask[segments == z] = True
             temp[mask] = fudged_image[mask]
             imgs.append(temp)
+            
             if len(imgs) == batch_size:
                 preds = classifier_fn(np.array(imgs))
                 labels.extend(preds)
