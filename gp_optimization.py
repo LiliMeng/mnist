@@ -27,6 +27,8 @@ parser.add_argument('--test-batch-size', type=int, default=1, metavar='N',
                     help='input batch size for testing (default: 1000)')
 parser.add_argument('--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
+parser.add_argument('--num_masked_superpixels', type=int, default=20, metavar='N',
+                    help='number of masked superpixels for each image (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
@@ -184,40 +186,43 @@ def eval_superpixel():
     print("ground truth target[0]")
     print(target[0])
 
-    random.seed(0)
-    random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), 30)
+    for i in range(2):
+	    random.seed(0)
+	    random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
 
-    mask = np.zeros(img.shape[:2], dtype= "uint8")
-    for (i, segVal) in enumerate(random_sampled_list):
-        mask[segments == segVal] = 255
-        
-   
-   
-    masked_img = org_img * mask
+	    mask = np.zeros(img.shape[:2], dtype= "uint8")
+	    for (i, segVal) in enumerate(random_sampled_list):
+	        mask[segments == segVal] = 255
+	           
+	    masked_img = org_img * mask
 
-    pic = masked_img
-    pic -= pic.min()
-    pic /= pic.max()
-    pic *= 255
+	    
 
-    pic =pic.transpose(1, 2, 0)
-    print(pic.shape)
-    pic = np.array(pic, dtype = np.uint8)
-    pic = cv2.applyColorMap(pic, cv2.COLORMAP_JET )
-   
-    masked_img = masked_img[None, :, :, :]
+	    pic = masked_img
+	    pic -= pic.min()
+	    pic /= pic.max()
+	    pic *= 255
 
-    masked_img = Variable(torch.from_numpy(masked_img)).cuda()
-    x0, x1, x2, pred0 = model(masked_img)
-    output = F.log_softmax(pred0, dim=1)
-    pred = output.data.max(1, keepdim=True)[1]
-    print("prediction[0]")
-    print(pred[0])
+	    pic =pic.transpose(1, 2, 0)
+	    print(pic.shape)
+	    pic = np.array(pic, dtype = np.uint8)
+	    cv2.imwrite('masked_img_{}.png'.format(i), pic)
 
-    cv2.imshow('superpixel', mark_boundaries(img_as_float(img), segments))
-    cv2.imshow('org_img', img)
-    cv2.imshow("Masked img with pred{}".format(pred[0]), pic)
-    cv2.waitKey(0)
+	    mask_heatmap = cv2.applyColorMap(pic, cv2.COLORMAP_JET )
+	   
+	    masked_img = masked_img[None, :, :, :]
+
+	    masked_img = Variable(torch.from_numpy(masked_img)).cuda()
+	    x0, x1, x2, pred0 = model(masked_img)
+	    output = F.log_softmax(pred0, dim=1)
+	    pred = output.data.max(1, keepdim=True)[1]
+	    print("prediction[0]")
+	    print(pred[0])
+
+	    cv2.imshow('superpixel', mark_boundaries(img_as_float(img), segments))
+	    cv2.imshow('org_img', img)
+	    cv2.imshow('Masked img with pred {}'.format(pred[0]), mask_heatmap)
+	    cv2.waitKey(0)
      
 
 if train_nn == True:
