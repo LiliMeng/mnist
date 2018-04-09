@@ -3,15 +3,13 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 import numpy as np
 import cv2
-import torch
-import torch.nn as nn
-from torch.autograd import Variable
-import torch.nn.functional as F
+
 from utils import weight_init
 from utils import save_checkpoint
 from skimage.segmentation import slic
@@ -19,8 +17,6 @@ from skimage.segmentation import mark_boundaries
 from skimage.util import img_as_float
 import matplotlib.pyplot as plt
 import numpy as np
-import argparse
-import cv2
 import random
 
 # Training settings
