@@ -291,10 +291,7 @@ elif use_neural_networks == True:
 	    cv2.imshow('org_img', img)
 	    cv2.imshow("Masked img with pred{}".format(pred[0]), pic)
 	    cv2.waitKey(0)
-	    
-
-	   
-	   
+	     
 
 	if train_nn == True:
 		for epoch in range(1, 5):
