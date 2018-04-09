@@ -214,75 +214,7 @@ def eval_cls():
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
-def eval_superpixel():
-    model.eval()
-    test_loss = 0
-    correct = 0
-    saved_checkpoint = torch.load('./saved_checkpoints/checkpoint.pth.tar')
-    model.load_state_dict( saved_checkpoint['model'] )
-     
-    count =0 
-    dataiter = iter(test_loader)
-    data, target = dataiter.next()
-    #for data, target in test_loader:
-    print("data")
-    print(data)
-    print("target")
-    print(target)
-    print("test_loader")
-    print(test_loader)
-  
-    count = count+1
-    if args.cuda:
-        data, target = data.cuda(), target.cuda()
-    data, target = Variable(data, volatile=True), Variable(target)
-    print("data.shape")
-    print(data.shape)
-    img = data[0]
-    img = img.type(torch.FloatTensor).data
-    img = img.numpy()
-    img = img.transpose( 1, 2, 0 )
-    mean = np.array([x/255.0 for x in [125.3, 123.0, 113.9]])
-    std  = np.array([x/255.0 for x in [63.0, 62.1, 66.7]])
-    img = (img * std + mean) * 255
-    img = img.astype(np.uint8)
-    segments = slic(img_as_float(img), n_segments = 50, sigma = 5)
- 
-    
-    x0, x1, x2, pred0 = model(data)
-    output = F.log_softmax(pred0, dim=1)
-    pred = output.data.max(1, keepdim=True)[1]
-    print("img.shape[:2]")
-    print(img.shape[:2])
-    print("prediction[0]")
-    print(pred[0])
-    print("target[0]")
-    print(target[0])
-    cv2.imshow('superpixel', mark_boundaries(img_as_float(img), segments))
-    cv2.imshow('original_img', img)
-    cv2.waitKey(0)
-    print("np.unique(segments)")
-    print(np.unique(segments))
-    random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), 20)
 
-    mask = np.zeros(img.shape[:2], dtype= "uint8")
-    for (i, segVal) in enumerate(random_sampled_list):
-        mask[segments == segVal] = 255
-        
-    # show the masked region
-    masked_img = cv2.bitwise_and(img, img, mask = mask)
-    cv2.imshow("Mask", mask)
-    cv2.imshow("Applied", masked_img)
-    cv2.waitKey(0)
-   
-    test_loss += F.nll_loss(output, target, size_average=False).data[0]
-    pred = output.data.max(1, keepdim=True)[1]
-    correct += pred.eq(target.data.view_as(pred)).long().cpu().sum()
-       
-    test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
 
 def eval_reg_show():
     model.eval()
@@ -364,8 +296,6 @@ for epoch in range(1, args.epochs + 1):
     elif train_reg_only == True:
         train_reg(epoch)
         eval_reg()
-    elif eval_superpixel:
-        eval_superpixel()
     else:
         print("No need to store model")
 #eval_reg_show()
