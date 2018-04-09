@@ -218,22 +218,22 @@ def eval_superpixel():
 	    print("org_img.shape")
 	    print(org_img.shape)
 	    masked_img_tensor = Variable(torch.from_numpy(masked_img_batch)).cuda()
-	    x0, x1, x2, pred0 = model(masked_img_tensor)
-	    output = F.log_softmax(pred0, dim=1)
-	    probability_output = F.softmax(pred0, dim=1)
+	    x0_mask, x1_mask, x2_mask, pred0_mask = model(masked_img_tensor)
+	    mask_output = F.log_softmax(pred0_mask, dim=1)
+	    probability_output = F.softmax(pred0_mask, dim=1)
 	    print("probability_output")
 	    print(probability_output)
 	    probability_score = probability_output.max(1, keepdim=True)[0]
 	    print("probability_score")
 	    print(probability_score.data)
-	    pred = output.data.max(1, keepdim=True)[1]
-	    print("prediction[0]")
-	    print(pred[0])
+	    pred_mask = mask_output.data.max(1, keepdim=True)[1]
+	    print("pred_mask[0]")
+	    print(pred_mask[0])
 
 	    plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')
 	    plt.subplot(132),plt.imshow(mark_boundaries(img_as_float(img), segments),'gray'),plt.title('Superpixel')
 	    #plt.subplot(133),plt.imshow(pic,'gray'),plt.title('Mask_gray')
-	    plt.subplot(133),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred[0].cpu().numpy()))
+	    plt.subplot(133),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred_mask[0].cpu().numpy()))
 
 	    plt.show()
 
