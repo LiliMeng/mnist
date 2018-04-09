@@ -187,7 +187,7 @@ def eval_superpixel():
     print(target[0])
 
     for i in range(2):
-	    random.seed(0)
+	    random.seed(1)
 	    random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
 
 	    mask = np.zeros(img.shape[:2], dtype= "uint8")
@@ -196,34 +196,48 @@ def eval_superpixel():
 	           
 	    masked_img = org_img * mask
 
-	    
-
 	    pic = masked_img
+	    pic =pic.transpose(1, 2, 0)
+
 	    pic -= pic.min()
 	    pic /= pic.max()
 	    pic *= 255
 
-	    pic =pic.transpose(1, 2, 0)
-	    print(pic.shape)
+	    
 	    pic = np.array(pic, dtype = np.uint8)
 	    cv2.imwrite('masked_img_{}.png'.format(i), pic)
+	    
 
 	    mask_heatmap = cv2.applyColorMap(pic, cv2.COLORMAP_JET )
 	   
-	    masked_img = masked_img[None, :, :, :]
+	    masked_img_batch = masked_img[None, :, :, :]
 
-	    masked_img = Variable(torch.from_numpy(masked_img)).cuda()
-	    x0, x1, x2, pred0 = model(masked_img)
+	    print("pic.shape")
+	    print(pic.shape)
+
+	    print("org_img.shape")
+	    print(org_img.shape)
+	    masked_img_tensor = Variable(torch.from_numpy(masked_img_batch)).cuda()
+	    x0, x1, x2, pred0 = model(masked_img_tensor)
 	    output = F.log_softmax(pred0, dim=1)
+	    probability_output = F.softmax(pred0, dim=1)
+	    print("probability_output")
+	    print(probability_output)
+	    probability_score = probability_output.max(1, keepdim=True)[0]
+	    print("probability_score")
+	    print(probability_score.data)
 	    pred = output.data.max(1, keepdim=True)[1]
 	    print("prediction[0]")
 	    print(pred[0])
 
-	    cv2.imshow('superpixel', mark_boundaries(img_as_float(img), segments))
-	    cv2.imshow('org_img', img)
-	    cv2.imshow('Masked img with pred {}'.format(pred[0]), mask_heatmap)
-	    cv2.waitKey(0)
-     
+	    plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')
+	    plt.subplot(132),plt.imshow(mark_boundaries(img_as_float(img), segments),'gray'),plt.title('Superpixel')
+	    #plt.subplot(133),plt.imshow(pic,'gray'),plt.title('Mask_gray')
+	    plt.subplot(133),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred[0].cpu().numpy()))
+
+	    plt.show()
+
+	   
 
 if train_nn == True:
 	for epoch in range(1, 5):
