@@ -5,7 +5,7 @@
 python gp_optimization.py
 # CUDA_VISIBLE_DEVICES=2 python main.py  # to specify GPU id to ex. 2
 ```
-## masked images for GP training. 
+## Masked images for GP training:  
 
 ### Training data and label:
 
