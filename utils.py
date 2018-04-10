@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import shutil
 
 from torch.autograd import Function
+import numpy as np
 
 
 class Binarized( Function ):
@@ -110,3 +111,6 @@ class WeightsCheck():
 
 
 
+def normalize_image(image):
+    """Convert pixel intensity values from [0, 255] to [0.0, 1.0]."""
+    return np.multiply(image.astype(np.float32), 1.0 / 255.0)

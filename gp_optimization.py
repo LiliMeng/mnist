@@ -10,14 +10,14 @@ from torch.autograd import Variable
 import numpy as np
 import cv2
 
-from utils import weight_init
-from utils import save_checkpoint
+from utils import weight_init, save_checkpoint, normalize_image
 from skimage.segmentation import slic
 from skimage.segmentation import mark_boundaries
 from skimage.util import img_as_float
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -27,7 +27,7 @@ parser.add_argument('--test-batch-size', type=int, default=1, metavar='N',
                     help='input batch size for testing (default: 1000)')
 parser.add_argument('--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
-parser.add_argument('--num_masked_superpixels', type=int, default=20, metavar='N',
+parser.add_argument('--num_masked_superpixels', type=int, default=25, metavar='N',
                     help='number of masked superpixels for each image (default: 10)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='learning rate (default: 0.01)')
@@ -179,25 +179,31 @@ def eval_superpixel():
     x0, x1, x2, pred0 = model(data)
     output = F.log_softmax(pred0, dim=1)
     pred = output.data.max(1, keepdim=True)[1]
-    print("img.shape[:2]")
-    print(img.shape[:2])
+    
     print("prediction[0]")
     print(pred[0])
     print("ground truth target[0]")
     print(target[0])
+    probability_output = F.softmax(pred0, dim=1)
+    print("probability_output")
+    print(probability_output)
+    probability_score = probability_output.max(1, keepdim=True)[0]
+    print("probability_score")
+    print(probability_score.data)
 
-    for i in range(2):
-	    random.seed(1)
+    #random.seed(1234)
+    for i in range(100):
+	    
 	    random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
 
 	    mask = np.zeros(img.shape[:2], dtype= "uint8")
-	    for (i, segVal) in enumerate(random_sampled_list):
+	    for (j, segVal) in enumerate(random_sampled_list):
 	        mask[segments == segVal] = 255
 	           
 	    masked_img = org_img * mask
 
 	    pic = masked_img
-	    pic =pic.transpose(1, 2, 0)
+	    pic = pic.transpose(1, 2, 0)
 
 	    pic -= pic.min()
 	    pic /= pic.max()
@@ -205,37 +211,42 @@ def eval_superpixel():
 
 	    
 	    pic = np.array(pic, dtype = np.uint8)
-	    cv2.imwrite('masked_img_{}.png'.format(i), pic)
+	    
 	    
 
 	    mask_heatmap = cv2.applyColorMap(pic, cv2.COLORMAP_JET )
 	   
+	    
+	    masked_img = normalize_image(masked_img)
 	    masked_img_batch = masked_img[None, :, :, :]
 
-	    print("pic.shape")
-	    print(pic.shape)
-
-	    print("org_img.shape")
-	    print(org_img.shape)
+	
 	    masked_img_tensor = Variable(torch.from_numpy(masked_img_batch)).cuda()
 	    x0_mask, x1_mask, x2_mask, pred0_mask = model(masked_img_tensor)
+	    print("pred0_mask")
+	    print(pred0_mask)
 	    mask_output = F.log_softmax(pred0_mask, dim=1)
-	    probability_output = F.softmax(pred0_mask, dim=1)
-	    print("probability_output")
-	    print(probability_output)
-	    probability_score = probability_output.max(1, keepdim=True)[0]
-	    print("probability_score")
-	    print(probability_score.data)
+	    mask_probability_output = F.softmax(pred0_mask, dim=1)
+	    print("mask_probability_output")
+	    print(mask_probability_output)
+	    mask_probability_score = mask_probability_output.max(1, keepdim=True)[0]
+	    print("mask_probability_score")
+	    print(mask_probability_score.cpu().data)
 	    pred_mask = mask_output.data.max(1, keepdim=True)[1]
-	    print("pred_mask[0]")
-	    print(pred_mask[0])
+	    print("pred_mask[0]", pred_mask[0].cpu().numpy()[0])
+	 
+	  
+	    if pred_mask[0].cpu().numpy()[0] == target[0].cpu().data.numpy()[0]:
+	    	cv2.imwrite('masked_img_{}_{}.png'.format(i, mask_probability_score.cpu().data.numpy()[0]), pic)
+	    else:
+	    	continue
 
-	    plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')
-	    plt.subplot(132),plt.imshow(mark_boundaries(img_as_float(img), segments),'gray'),plt.title('Superpixel')
-	    #plt.subplot(133),plt.imshow(pic,'gray'),plt.title('Mask_gray')
-	    plt.subplot(133),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred_mask[0].cpu().numpy()))
+	    # plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')
+	    # plt.subplot(132),plt.imshow(mark_boundaries(img_as_float(img), segments),'gray'),plt.title('Superpixel')
+	    # #plt.subplot(133),plt.imshow(pic,'gray'),plt.title('Mask_gray')
+	    # plt.subplot(133),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred_mask[0].cpu().numpy()))
 
-	    plt.show()
+	    # plt.show()
 
 	   
 
