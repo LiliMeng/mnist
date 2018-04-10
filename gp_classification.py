@@ -19,7 +19,7 @@ from gpytorch.random_variables import GaussianRandomVariable
 
 from utils import normalize_image
 # Training data
-img = cv2.imread('./masks/mask_0_0.png',0)
+img = cv2.imread('./masks/mask_34_1.png',0)
 
 
 
@@ -28,25 +28,32 @@ num_row, num_col = img.shape
 assert(num_row==num_col)
 n = num_row
 
-train_x = Variable(torch.from_numpy(img))
+count=0
+n = 20
+train_x = torch.zeros(int(pow(n, 2)), 2)
 train_y = torch.zeros(int(pow(n, 2)))
-
-print(train_x)
-
 for i in range(n):
-	for j in range(n):
-		if train_x.data[i][j] == 255:
-			train_y[i*n + j] = 1.0
-		else:
-			train_y[i*n+j] = 0.5
+    for j in range(n):
+        if img[i][j] == 255:
+            train_x[i * n + j][0] = i
+            train_x[i * n + j][1] = j
+            train_y[i * n + j] = 0.0
+            count += 1
 
+print("count")
+print(count)
+
+train_x = Variable(train_x)
 train_y = Variable(train_y)
 
-print(train_y)
+#print(train_y)
+
 # Our classification model is just KISS-GP run through a Bernoulli likelihood
+# We use KISS-GP (kernel interpolation for scalable structured Gaussian Processes)
+# as in https://arxiv.org/pdf/1503.01057.pdf
 class GPClassificationModel(gpytorch.models.GridInducingVariationalGP):
     def __init__(self):
-        super(GPClassificationModel, self).__init__(grid_size=10, grid_bounds=[(0, 1), (0, 1)])
+        super(GPClassificationModel, self).__init__(grid_size=10, grid_bounds=[(0, 28), (0, 28)])
         # Near-zero mean
         self.mean_module = ConstantMean(constant_bounds=[-1e-5, 1e-5])
         # RBF as universal approximator
