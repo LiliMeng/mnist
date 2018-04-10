@@ -48,8 +48,8 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 train_nn = False
-prepare_GP_training_data = False
-GP_training = True
+prepare_GP_training_data = True
+
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 train_loader = torch.utils.data.DataLoader(
