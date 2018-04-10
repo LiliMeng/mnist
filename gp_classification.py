@@ -29,7 +29,7 @@ assert(num_row==num_col)
 n = num_row
 
 count=0
-n = 20
+n = 28
 train_x = torch.zeros(int(pow(n, 2)), 2)
 train_y = torch.zeros(int(pow(n, 2)))
 for i in range(n):
@@ -39,6 +39,10 @@ for i in range(n):
             train_x[i * n + j][1] = j
             train_y[i * n + j] = 0.0
             count += 1
+        else:
+            train_x[i * n + j][0] = i
+            train_x[i * n + j][1] = j
+            train_y[i * n + j] = 0.5
 
 print("count")
 print(count)
@@ -105,3 +109,41 @@ def train():
         ))
         optimizer.step()
 train()
+
+# Set model and likelihood into eval mode
+model.eval()
+likelihood.eval()
+
+# Initialize figiure an axis
+f, observed_ax = plt.subplots(1, 1, figsize=(4, 3))
+# Test points are 100x100 grid of [0,1]x[0,1] with spacing of 1/99
+n = 28
+test_x = Variable(torch.zeros(int(pow(n, 2)), 2))
+for i in range(n):
+    for j in range(n):
+        test_x.data[i * n + j][0] = i
+        test_x.data[i * n + j][1] = j
+        
+# Make binary predictions by warmping the model output through a Bernoulli likelihood
+with gpytorch.beta_features.fast_pred_var():
+    predictions = likelihood(model(test_x))
+
+#print("predictions")
+#print(predictions)
+
+def ax_plot(ax, rand_var, title):
+    # prob<0.5 --> label -1 // prob>0.5 --> label 1
+    pred_labels = rand_var.mean().ge(0.95).float().mul(2).sub(1).data.numpy()
+    # Colors = yellow for 1, red for -1
+    color = []
+    for i in range(len(pred_labels)):
+        if pred_labels[i] == 1:
+            color.append('y')
+        else:
+            color.append('r')
+    # Plot data a scatter plot
+    ax.scatter(test_x.data[:, 0].numpy(), test_x.data[:, 1].numpy(), color=color, s=1)
+    ax.set_title(title)
+
+ax_plot(observed_ax, predictions, 'Predicted Values')
+plt.show()
