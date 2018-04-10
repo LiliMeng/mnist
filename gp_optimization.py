@@ -212,7 +212,6 @@ def eval_superpixel():
 	    
 	    pic = np.array(pic, dtype = np.uint8)
 	    
-	    
 
 	    mask_heatmap = cv2.applyColorMap(pic, cv2.COLORMAP_JET )
 	   
