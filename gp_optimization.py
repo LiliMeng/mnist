@@ -192,7 +192,7 @@ def eval_superpixel():
     print(probability_score.data)
 
     #random.seed(1234)
-    for i in range(100):
+    for i in range(1000):
 	    
 	    random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
 
