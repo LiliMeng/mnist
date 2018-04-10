@@ -151,12 +151,12 @@ print("predictions")
 print(predictions)
 
 def ax_plot(ax, rand_var, title):
-    # prob<0.5 --> label -1 // prob>0.5 --> label 1
+    # prob<0.5 --> label 0 // prob>0.95 --> label 1
     pred_labels = rand_var.mean().ge(0.95).float().mul(2).sub(1).data.numpy()
     # Colors = yellow for 1, red for -1
     color = []
     for i in range(len(pred_labels)):
-        if pred_labels[i] == 1:
+        if pred_labels[i] == 0:
             color.append('y')
         else:
             color.append('r')
