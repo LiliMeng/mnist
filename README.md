@@ -1,11 +1,15 @@
 # Basic MNIST Example
 
+## Prequisite:
+1. Install GPytorch following : https://github.com/cornellius-gp/gpytorch
+
+## Get masked images for GP training:  
+
 ```bash
 
 python gp_optimization.py
 # CUDA_VISIBLE_DEVICES=2 python main.py  # to specify GPU id to ex. 2
 ```
-## Masked images for GP training:  
 
 ### Training data and label:
 

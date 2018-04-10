@@ -48,6 +48,8 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 train_nn = False
+prepare_GP_training_data = False
+GP_training = True
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 train_loader = torch.utils.data.DataLoader(
@@ -259,5 +261,7 @@ if train_nn == True:
                     #'optimizer_cls': optimizer_cls.state_dict(),
                     #'optimizer_reg': optimizer_reg.state_dict(),
                 }, is_best=False, save_folder="saved_checkpoints" , filename='checkpoint.pth.tar')
-else:
+elif prepare_GP_training_data == True:
 	eval_superpixel()
+else:
+	raise Exception("Not implemented yet")
