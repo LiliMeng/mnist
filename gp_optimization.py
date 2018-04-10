@@ -194,7 +194,7 @@ def eval_superpixel():
 	print(probability_score.data)
 
 	#random.seed(1234)
-	for i in range(50):
+	for i in range(1000):
 		
 		random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
 
@@ -241,9 +241,9 @@ def eval_superpixel():
 		if pred_mask[0].cpu().numpy()[0] == target[0].cpu().data.numpy()[0]:
 			cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
 			cv2.imwrite('./mask_on_img/masked_imgs_index{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 1, mask_probability_score.cpu().data.numpy()[0]), pic)
-		else:
-			cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
-			cv2.imwrite('./mask_on_img/masked_imgs_index{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 0, mask_probability_score.cpu().data.numpy()[0]), pic)
+		# else:
+		# 	cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
+		# 	cv2.imwrite('./mask_on_img/masked_imgs_index{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 0, mask_probability_score.cpu().data.numpy()[0]), pic)
 
 		# plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')
 		# plt.subplot(132),plt.imshow(mark_boundaries(img_as_float(img), segments),'gray'),plt.title('Superpixel')

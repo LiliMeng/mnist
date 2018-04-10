@@ -43,15 +43,17 @@ train_y = []
 
 for i in range(len(mask_filenames)):
     img = cv2.imread(mask_filenames[i] ,0)
-    label = int(train_mask_labels[i])
+    mask_label = int(train_mask_labels[i])
 
-    if label == 1:
+    # If the mask make the correct prediction, then each pixel mask has a label 0
+    if mask_label == 1:
         for i in range(n):
             for j in range(n):
                 if img[i][j] == 255:
                     train_x.append([i, j])
-                    train_y.append(0)        
-    elif label == 0:
+                    train_y.append(0)  
+    # If the mask make the wrong prediciton, then each pixel mask has a label 1      
+    elif mask_label == 0:
         for i in range(n):
             for j in range(n):
                 if img[i][j] == 255:
@@ -156,7 +158,7 @@ def ax_plot(ax, rand_var, title):
     # Colors = yellow for 1, red for -1
     color = []
     for i in range(len(pred_labels)):
-        if pred_labels[i] == 0:
+        if pred_labels[i] == 1:
             color.append('y')
         else:
             color.append('r')
