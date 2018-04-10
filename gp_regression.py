@@ -27,6 +27,8 @@ n = num_row
 train_x = Variable(torch.from_numpy(normalized_img))
 train_y = torch.zeros(int(pow(n, 2)))
 
+print(train_y)
+
 for i in range(n):
 	for j in range(n):
 		train_y[i*n+j]=train_x.data[i,j]
