@@ -3,9 +3,11 @@ import torch
 import gpytorch
 from matplotlib import pyplot as plt
 import cv2
+import os
 
 from torch.autograd import Variable
-import cv2
+
+
 import numpy as np
 from skimage.segmentation import slic
 from skimage.segmentation import mark_boundaries
@@ -18,37 +20,53 @@ from gpytorch.likelihoods import GaussianLikelihood, BernoulliLikelihood
 from gpytorch.random_variables import GaussianRandomVariable
 
 from utils import normalize_image
+
+
 # Training data
-img = cv2.imread('./masks/mask_34_1.png',0)
+def load_images_from_folder(folder):
+    img_filenames = []
+    labels = []
+    for filename in os.listdir(folder):      
+        label=filename.split('_')[2].split('.')[0]
+        img_filename = os.path.join(folder,filename)
+        if img_filename is not None:
+            img_filenames.append(img_filename)
+            labels.append(label)
+    return img_filenames, labels
 
+mask_filenames, train_mask_labels = load_images_from_folder('./masks')
 
-
-num_row, num_col = img.shape
-
-assert(num_row==num_col)
-n = num_row
-
-count=0
 n = 28
-train_x = torch.zeros(int(pow(n, 2)), 2)
-train_y = torch.zeros(int(pow(n, 2)))
-for i in range(n):
-    for j in range(n):
-        if img[i][j] == 255:
-            train_x[i * n + j][0] = i
-            train_x[i * n + j][1] = j
-            train_y[i * n + j] = 0.0
-            count += 1
-        else:
-            train_x[i * n + j][0] = i
-            train_x[i * n + j][1] = j
-            train_y[i * n + j] = 0.5
 
-print("count")
-print(count)
+train_x = []
+train_y = []
 
-train_x = Variable(train_x)
-train_y = Variable(train_y)
+for i in range(len(mask_filenames)):
+    img = cv2.imread(mask_filenames[i] ,0)
+    label = int(train_mask_labels[i])
+
+    if label == 1:
+        for i in range(n):
+            for j in range(n):
+                if img[i][j] == 255:
+                    train_x.append([i, j])
+                    train_y.append(0)        
+    elif label == 0:
+        for i in range(n):
+            for j in range(n):
+                if img[i][j] == 255:
+                    train_x.append([i, j])
+                    train_y.append(1) 
+    else:
+        raise Exception("No such labels")
+
+
+train_x = Variable(torch.FloatTensor(np.asarray(train_x)))
+train_y = Variable(torch.FloatTensor(np.asarray(train_y)))
+
+
+print(train_x.shape)
+print(train_y.shape)
 
 #print(train_y)
 
@@ -98,6 +116,7 @@ def train():
     for i in range(num_training_iterations):
         # zero back propped gradients
         optimizer.zero_grad()
+       
         # Make  prediction
         output = model(train_x)
         # Calc loss and use to compute derivatives
@@ -128,8 +147,8 @@ for i in range(n):
 with gpytorch.beta_features.fast_pred_var():
     predictions = likelihood(model(test_x))
 
-#print("predictions")
-#print(predictions)
+print("predictions")
+print(predictions)
 
 def ax_plot(ax, rand_var, title):
     # prob<0.5 --> label -1 // prob>0.5 --> label 1
