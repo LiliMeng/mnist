@@ -20,3 +20,12 @@ Training label is confidence score
 Here 122 represents the index number from the 1000 imgs, [ 0.93749815] represents confidence score
 
 masked_img_122_[ 0.93749815].png
+
+
+## Train  and Evaluate Gaussian Process Mask
+
+```bash
+
+python gp_classification.py
+
+```
