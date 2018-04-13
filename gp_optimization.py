@@ -10,6 +10,7 @@ from torch.autograd import Variable
 import numpy as np
 import cv2
 
+
 from utils import weight_init, save_checkpoint, normalize_image
 from skimage.segmentation import slic
 from skimage.segmentation import mark_boundaries
@@ -156,102 +157,118 @@ def eval_superpixel():
     model.load_state_dict( saved_checkpoint['model'] )
      
     count =0 
-    dataiter = iter(test_loader)
-    data, target = dataiter.next()
-    
+    for data, target in test_loader:
+        count +=1
+        if count>2:
+            break
+        if args.cuda:
+            data, target = data.cuda(), target.cuda()
+        data, target = Variable(data, volatile=True), Variable(target)
 
-    if args.cuda:
-        data, target = data.cuda(), target.cuda()
-    data, target = Variable(data, volatile=True), Variable(target)
+        org_img = data[0]
+      
+        org_img = org_img.type(torch.FloatTensor).data
+        org_img = org_img.numpy()
+        img = org_img.transpose( 1, 2, 0 )
+        img -= img.min()
+        img /= img.max()
+        img *= 255
+        img = img.astype(np.uint8)
+       
+        # cv2.imshow('original_img_index{}_label_{}.png'.format(count, target[0].cpu().data.numpy()[0]), img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
-    img = data[0]
-   
-    org_img = img.type(torch.FloatTensor).data
-    org_img= org_img.numpy()
-    img = org_img.transpose( 1, 2, 0 )
-    mean = np.array([x/255.0 for x in [125.3, 123.0, 113.9]])
-    std  = np.array([x/255.0 for x in [63.0, 62.1, 66.7]])
-    img = (img * std + mean) * 255
-    img = img.astype(np.uint8)
+        if count ==2:
 
-    cv2.imwrite('original_img.png', img)
+            cv2.imwrite('original_img_index{}_label_{}.png'.format(count, target[0].cpu().data.numpy()[0]), img)
 
-    segments = slic(img_as_float(img), n_segments = 50, sigma = 5)
- 
-    
-    x0, x1, x2, pred0 = model(data)
-    output = F.log_softmax(pred0, dim=1)
-    pred = output.data.max(1, keepdim=True)[1]
-    
-    # print("prediction[0]")
-    # print(pred[0])
-    # print("ground truth target[0]")
-    # print(target[0])
-    probability_output = F.softmax(pred0, dim=1)
-    # print("probability_output")
-    # print(probability_output)
-    probability_score = probability_output.max(1, keepdim=True)[0]
-    # print("probability_score")
-    # print(probability_score.data)
+            segments = slic(img_as_float(img), n_segments = 20, sigma = 5)
+            
+            colored_img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
 
-    #random.seed(1234)
-    correct_pred_count=0
-    for i in range(1000):
         
-        random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
+            x0, x1, x2, pred0 = model(data)
+            output = F.log_softmax(pred0, dim=1)
+            pred = output.data.max(1, keepdim=True)[1]
+            
+            # print("prediction[0]")
+            # print(pred[0])
+            # print("ground truth target[0]")
+            # print(target[0])
+            probability_output = F.softmax(pred0, dim=1)
+            # print("probability_output")
+            # print(probability_output)
+            probability_score = probability_output.max(1, keepdim=True)[0]
+            # print("probability_score")
+            # print(probability_score.data)
 
-        mask = np.zeros(img.shape[:2], dtype= "uint8")
-        for (j, segVal) in enumerate(random_sampled_list):
-            mask[segments == segVal] = 255
+            correct_pred_count=0
+            for i in range(1000):
+                
+                random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
+
+                print("len(random_sampled_list)")
+                print(len(random_sampled_list))
+                mask = np.zeros(img.shape[:2], dtype= "uint8")
+                mask.fill(255)
+                for (j, segVal) in enumerate(random_sampled_list):
+                    mask[segments == segVal] = 0
+                    
+
+                masked_img = org_img * mask
+                
+             
+                pic = masked_img
+
+
+                pic = pic.transpose(1, 2, 0)
+                pic -= pic.min()
+                pic /= pic.max()
+                pic *= 255
+                
+                pic = np.array(pic, dtype = np.uint8)
                
-        masked_img = org_img * mask
+                
+                colored_pic = cv2.cvtColor(pic, cv2.COLOR_GRAY2RGB)
+                mask_heatmap = cv2.applyColorMap(colored_pic, cv2.COLORMAP_JET )
+                
+                masked_img = normalize_image(masked_img)
+                masked_img_batch = masked_img[None, :, :, :]
 
+            
+                masked_img_tensor = Variable(torch.from_numpy(masked_img_batch)).cuda()
+                x0_mask, x1_mask, x2_mask, pred0_mask = model(masked_img_tensor)
+                
+                mask_output = F.log_softmax(pred0_mask, dim=1)
+                mask_probability_output = F.softmax(pred0_mask, dim=1)
+                # print("mask_probability_output")
+                # print(mask_probability_output)
+                mask_probability_score = mask_probability_output.max(1, keepdim=True)[0]
+                # print("mask_probability_score")
+                # print(mask_probability_score.cpu().data)
+                pred_mask = mask_output.data.max(1, keepdim=True)[1]
+                # print("pred_mask[0]", pred_mask[0].cpu().numpy()[0])
 
-        pic = masked_img
-        pic = pic.transpose(1, 2, 0)
+                if pred_mask[0].cpu().numpy()[0] == target[0].cpu().data.numpy()[0]:
+                    correct_pred_count+=1
+                    print("correct_pred_count")
+                    print(correct_pred_count)
+                    cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
+                    cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 1, mask_probability_score.cpu().data.numpy()[0]), pic)
+                else:
+                    cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
+                    cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 0, mask_probability_score.cpu().data.numpy()[0]), pic)
 
-        pic -= pic.min()
-        pic /= pic.max()
-        pic *= 255
+               
+                # plt.subplot(151),plt.imshow(colored_img, 'gray'),plt.title('original_img_label_{}.png'.format(target[0].cpu().data.numpy()[0]))
+                # plt.subplot(152),plt.imshow(mark_boundaries(img_as_float(colored_img), segments),'gray'),plt.title('Superpixel')
+                # plt.subplot(153),plt.imshow(cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB), 'gray'), plt.title("Mask")
+                # plt.subplot(154),plt.imshow(colored_pic,'gray'),plt.title('Mask_gray')
+                # plt.subplot(155),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred_mask[0].cpu().numpy()))
+                # plt.show()
+                # plt.close()
         
-        pic = np.array(pic, dtype = np.uint8)
-        
-
-        mask_heatmap = cv2.applyColorMap(pic, cv2.COLORMAP_JET )
-        
-        masked_img = normalize_image(masked_img)
-        masked_img_batch = masked_img[None, :, :, :]
-
-    
-        masked_img_tensor = Variable(torch.from_numpy(masked_img_batch)).cuda()
-        x0_mask, x1_mask, x2_mask, pred0_mask = model(masked_img_tensor)
-        
-        mask_output = F.log_softmax(pred0_mask, dim=1)
-        mask_probability_output = F.softmax(pred0_mask, dim=1)
-        # print("mask_probability_output")
-        # print(mask_probability_output)
-        mask_probability_score = mask_probability_output.max(1, keepdim=True)[0]
-        # print("mask_probability_score")
-        # print(mask_probability_score.cpu().data)
-        pred_mask = mask_output.data.max(1, keepdim=True)[1]
-        # print("pred_mask[0]", pred_mask[0].cpu().numpy()[0])
-
-        if pred_mask[0].cpu().numpy()[0] == target[0].cpu().data.numpy()[0]:
-            correct_pred_count+=1
-            print("correct_pred_count")
-            print(correct_pred_count)
-            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
-            cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 1, mask_probability_score.cpu().data.numpy()[0]), pic)
-        else:
-            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
-            cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 0, mask_probability_score.cpu().data.numpy()[0]), pic)
-
-        #plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')
-        #plt.subplot(132),plt.imshow(mark_boundaries(img_as_float(img), segments),'gray'),plt.title('Superpixel')
-        #plt.subplot(133),plt.imshow(pic,'gray'),plt.title('Mask_gray')
-        #plt.subplot(133),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred_mask[0].cpu().numpy()))
-        #plt.show()
-
 if train_nn == True:
   for epoch in range(1, 5):
       train_cls(epoch)

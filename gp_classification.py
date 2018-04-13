@@ -104,12 +104,12 @@ for i in range(len(mask_filenames)):
         for j in range(n):
             # If the mask make the correct prediction, then each pixel mask has a label 1
             if mask_label == 1:
-                if img[i][j] == 255:
+                if img[i][j] == 0:
                     train_x.append([i, j])
                     train_y.append(1)  
             # If the mask make the wrong prediciton, then each pixel mask has a label 0      
             elif mask_label == 0:
-                if img[i][j] == 255:
+                if img[i][j] == 0:
                     train_x.append([i, j])
                     train_y.append(0) 
             else:
@@ -169,7 +169,7 @@ optimizer = torch.optim.Adam([
 mll = gpytorch.mlls.VariationalMarginalLogLikelihood(likelihood, model, n_data=len(train_y))
 
 def train():
-    num_training_iterations = 200
+    num_training_iterations = 100
     for i in range(num_training_iterations):
         # zero back propped gradients
         optimizer.zero_grad()
@@ -232,7 +232,7 @@ test_heatmap = cv2.applyColorMap(test_gray_img, cv2.COLORMAP_JET )
 cv2.imwrite('./weighted_mask/pred_mask_heatmap.png', test_heatmap)
 
 
-org_img = cv2.imread('original_img.png')
+org_img = cv2.imread('original_img_index3_label_9.png')
 plt.subplot(131),plt.imshow(org_img,'gray'),plt.title('Original img')
 plt.subplot(132),plt.imshow(result_heatmap,'gray'),plt.title('Summed label training heatmap')
 plt.subplot(133),plt.imshow(test_heatmap,'gray'),plt.title('Predicted mask heatmap')
