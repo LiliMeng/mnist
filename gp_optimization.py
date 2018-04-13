@@ -158,15 +158,14 @@ def eval_superpixel():
     count =0 
     dataiter = iter(test_loader)
     data, target = dataiter.next()
-    #for data, target in test_loader:
+    
 
     if args.cuda:
         data, target = data.cuda(), target.cuda()
     data, target = Variable(data, volatile=True), Variable(target)
 
     img = data[0]
-    print("img")
-    print(img)    
+   
     org_img = img.type(torch.FloatTensor).data
     org_img= org_img.numpy()
     img = org_img.transpose( 1, 2, 0 )
@@ -174,6 +173,9 @@ def eval_superpixel():
     std  = np.array([x/255.0 for x in [63.0, 62.1, 66.7]])
     img = (img * std + mean) * 255
     img = img.astype(np.uint8)
+
+    cv2.imwrite('original_img.png', img)
+
     segments = slic(img_as_float(img), n_segments = 50, sigma = 5)
  
     
@@ -238,10 +240,10 @@ def eval_superpixel():
             correct_pred_count+=1
             print("correct_pred_count")
             print(correct_pred_count)
-            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
+            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
             cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 1, mask_probability_score.cpu().data.numpy()[0]), pic)
         else:
-            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
+            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
             cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 0, mask_probability_score.cpu().data.numpy()[0]), pic)
 
         #plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')
