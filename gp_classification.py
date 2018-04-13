@@ -50,7 +50,7 @@ for i in range(len(mask_filenames)):
     for i in range(n):
         for j in range(n):
             pixel_position = (i, j)
-            if img[i][j] == 255:
+            if img[i][j] == 0:
                 if pixel_position in dict_pixel:
                     dict_pixel[pixel_position] += mask_label
                 else:
