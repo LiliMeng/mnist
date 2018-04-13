@@ -238,10 +238,10 @@ def eval_superpixel():
             correct_pred_count+=1
             print("correct_pred_count")
             print(correct_pred_count)
-            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
+            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
             cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 1, mask_probability_score.cpu().data.numpy()[0]), pic)
         else:
-            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 0), mask)
+            cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
             cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 0, mask_probability_score.cpu().data.numpy()[0]), pic)
 
         #plt.subplot(131),plt.imshow(img,'gray'),plt.title('Org_img')

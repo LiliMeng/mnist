@@ -46,6 +46,7 @@ dict_pixel = {}
 for i in range(len(mask_filenames)):
     img = cv2.imread(mask_filenames[i] ,0)
     mask_label = int(train_mask_labels[i])
+   
     for i in range(n):
         for j in range(n):
             pixel_position = (i, j)
@@ -92,21 +93,22 @@ cv2.imwrite('./weighted_mask/weighted_mask.png', result_gray_img)
 #cv2.imshow("result_img", result_gray_img)       
 result_gray_img = np.array(result_gray_img, dtype = np.uint8)
 result_heatmap = cv2.applyColorMap(result_gray_img, cv2.COLORMAP_JET )
-cv2.imwrite('./weighted_mask/weighted_mask_heatmap.png', result_gray_img)
+cv2.imwrite('./weighted_mask/weighted_mask_heatmap.png', result_heatmap)
 # cv2.imshow("result_heatmap", result_heatmap)
 # cv2.waitKey()
+
 for i in range(len(mask_filenames)):
     img = cv2.imread(mask_filenames[i] ,0)
     mask_label = int(train_mask_labels[i])
     for i in range(n):
         for j in range(n):
-            # If the mask make the correct prediction, then each pixel mask has a label 0
-            if mask_label == 1:
+            # If the mask make the correct prediction, then each pixel mask has a label 1
+            if mask_label == 0:
                 if img[i][j] == 255:
                     train_x.append([i, j])
                     train_y.append(0)  
-            # If the mask make the wrong prediciton, then each pixel mask has a label 1      
-            elif mask_label == 0:
+            # If the mask make the wrong prediciton, then each pixel mask has a label 0      
+            elif mask_label == 1:
                 if img[i][j] == 255:
                     train_x.append([i, j])
                     train_y.append(1) 
@@ -205,19 +207,32 @@ with gpytorch.beta_features.fast_pred_var():
 print("predictions")
 print(predictions)
 
-def ax_plot(ax, rand_var, title):
-    # prob<0.5 --> label 0 // prob>0.95 --> label 1
-    pred_labels = rand_var.mean().ge(0.6).float().mul(2).sub(1).cpu().data.numpy()
-    # Colors = yellow for 1, red for -1
-    color = []
-    for i in range(len(pred_labels)):
-        if pred_labels[i] == 1:
-            color.append('y')
-        else:
-            color.append('r')
-    # Plot data a scatter plot
-    ax.scatter(test_x.data[:, 0].cpu().numpy(), test_x.data[:, 1].cpu().numpy(), color=color, s=1)
-    ax.set_title(title)
+print("predictions.mean().cpu().data.numpy()")
+print(predictions.mean().cpu().data.numpy())
+test_gray_img = np.zeros((28,28))
 
-ax_plot(observed_ax, predictions, 'Predicted Values')
+for i in range(n):
+    for j in range(n):
+        print("predictions.mean().cpu().data.numpy()[i*n+j]")
+        print(predictions.mean().cpu().data.numpy()[i*n+j])
+        test_gray_img[i][j] = predictions.mean().cpu().data.numpy()[i*n+j]
+        print("test_gray_img[i][j]")
+        print(test_gray_img[i][j])
+
+test_gray_img -= test_gray_img.min()
+test_gray_img = test_gray_img/ test_gray_img.max()
+test_gray_img *= 255
+
+
+test_gray_img = np.array(test_gray_img, dtype = np.uint8)
+
+cv2.imwrite('./weighted_mask/pred_mask.png', test_gray_img)
+
+test_heatmap = cv2.applyColorMap(test_gray_img, cv2.COLORMAP_JET )
+cv2.imwrite('./weighted_mask/pred_mask_heatmap.png', test_heatmap)
+
+
+
+plt.subplot(121),plt.imshow(result_heatmap,'gray'),plt.title('summed training heatmap')
+plt.subplot(122),plt.imshow(test_heatmap,'gray'),plt.title('predicted mask heatmap')
 plt.show()
