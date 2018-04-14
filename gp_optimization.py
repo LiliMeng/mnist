@@ -12,7 +12,7 @@ import cv2
 
 
 from utils import weight_init, save_checkpoint, normalize_image
-from skimage.segmentation import slic
+from skimage.segmentation import felzenszwalb, slic, quickshift, watershed
 from skimage.segmentation import mark_boundaries
 from skimage.util import img_as_float
 import matplotlib.pyplot as plt
@@ -159,7 +159,7 @@ def eval_superpixel():
     count =0 
     for data, target in test_loader:
         count +=1
-        if count>2:
+        if count>10:
             break
         if args.cuda:
             data, target = data.cuda(), target.cuda()
@@ -175,16 +175,17 @@ def eval_superpixel():
         img *= 255
         img = img.astype(np.uint8)
        
-        # cv2.imshow('original_img_index{}_label_{}.png'.format(count, target[0].cpu().data.numpy()[0]), img)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        cv2.imshow('original_img_index{}_label_{}.png'.format(count, target[0].cpu().data.numpy()[0]), img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
-        if count ==2:
+        if count == 10:
 
             cv2.imwrite('original_img_index{}_label_{}.png'.format(count, target[0].cpu().data.numpy()[0]), img)
 
-            segments = slic(img_as_float(img), n_segments = 20, sigma = 5)
+            segments = felzenszwalb(img_as_float(img), scale=100, sigma=0.5, min_size=5)
             
+            print("Felzenszwalb number of segments: {}".format(len(np.unique(segments))))
             colored_img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
 
         
@@ -208,8 +209,6 @@ def eval_superpixel():
                 
                 random_sampled_list= random.sample(range(np.unique(segments)[0], np.unique(segments)[-1]), args.num_masked_superpixels)
 
-                print("len(random_sampled_list)")
-                print(len(random_sampled_list))
                 mask = np.zeros(img.shape[:2], dtype= "uint8")
                 mask.fill(255)
                 for (j, segVal) in enumerate(random_sampled_list):
@@ -252,8 +251,8 @@ def eval_superpixel():
 
                 if pred_mask[0].cpu().numpy()[0] == target[0].cpu().data.numpy()[0]:
                     correct_pred_count+=1
-                    print("correct_pred_count")
-                    print(correct_pred_count)
+                    print("correct_pred_count", correct_pred_count)
+               
                     cv2.imwrite('./masks/mask_{}_{}.png'.format(i, 1), mask)
                     cv2.imwrite('./mask_on_img/masked_imgs_{}_pred_{}_{}_{}.png'.format(i, pred_mask[0].cpu().numpy()[0], 1, mask_probability_score.cpu().data.numpy()[0]), pic)
                 else:
@@ -264,8 +263,8 @@ def eval_superpixel():
                 # plt.subplot(151),plt.imshow(colored_img, 'gray'),plt.title('original_img_label_{}.png'.format(target[0].cpu().data.numpy()[0]))
                 # plt.subplot(152),plt.imshow(mark_boundaries(img_as_float(colored_img), segments),'gray'),plt.title('Superpixel')
                 # plt.subplot(153),plt.imshow(cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB), 'gray'), plt.title("Mask")
-                # plt.subplot(154),plt.imshow(colored_pic,'gray'),plt.title('Mask_gray')
-                # plt.subplot(155),plt.imshow(mask_heatmap,'gray'),plt.title('Masked_heatmap pred {}'.format(pred_mask[0].cpu().numpy()))
+                # plt.subplot(154),plt.imshow(cv2.cvtColor(colored_pic, cv2.COLOR_BGR2RGB),'gray'),plt.title('Org_img with mask gray')
+                # plt.subplot(155),plt.imshow(cv2.cvtColor(mask_heatmap, cv2.COLOR_BGR2RGB),'gray'),plt.title('Org_img with mask heatmap pred {}'.format(pred_mask[0].cpu().numpy()))
                 # plt.show()
                 # plt.close()
         
