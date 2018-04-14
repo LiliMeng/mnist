@@ -159,7 +159,7 @@ def eval_superpixel():
     count =0 
     for data, target in test_loader:
         count +=1
-        if count>10:
+        if count>2:
             break
         if args.cuda:
             data, target = data.cuda(), target.cuda()
@@ -179,7 +179,7 @@ def eval_superpixel():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-        if count == 10:
+        if count == 2:
 
             cv2.imwrite('original_img_index{}_label_{}.png'.format(count, target[0].cpu().data.numpy()[0]), img)
 

@@ -230,7 +230,7 @@ cv2.imwrite('./weighted_mask/pred_mask_heatmap.png', test_heatmap)
 
 
 
-org_img = cv2.imread('original_img_index10_label_6.png', 0)
+org_img = cv2.imread('original_img_index15_label_1.png', 0)
 
 
 final_masked_img = org_img * org_test_gray_img 
@@ -241,7 +241,7 @@ final_masked_img *= 255
 final_masked_img = np.array(final_masked_img, dtype = np.uint8)
 final_masked_img_color = cv2.cvtColor(final_masked_img, cv2.COLOR_GRAY2RGB)
 
-org_img_3channel = cv2.imread('original_img_index10_label_6.png')
+org_img_3channel = cv2.imread('original_img_index15_label_1.png')
 
 plt.subplot(141),plt.imshow(org_img_3channel,'gray'),plt.title('Original img')
 plt.subplot(142),plt.imshow(cv2.cvtColor(result_heatmap, cv2.COLOR_BGR2RGB),'jet'),plt.title('Summed label training heatmap')
