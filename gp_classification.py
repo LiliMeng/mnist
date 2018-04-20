@@ -21,6 +21,10 @@ from gpytorch.random_variables import GaussianRandomVariable
 
 from utils import normalize_image
 
+dataset = "MNIST"
+
+if dataset == "MNIST":
+    n = 28
 
 # Training data
 def load_images_from_folder(folder):
@@ -36,7 +40,7 @@ def load_images_from_folder(folder):
 
 mask_filenames, train_mask_labels = load_images_from_folder('./masks')
 
-n = 28
+
 
 train_x = []
 train_y = []
@@ -47,34 +51,19 @@ for i in range(len(mask_filenames)):
     img = cv2.imread(mask_filenames[i] ,0)
     mask_label = int(train_mask_labels[i])
    
-    for i in range(n):
-        for j in range(n):
-            pixel_position = (i, j)
-            if img[i][j] == 0:
+    for j in range(n):
+        for k in range(n):
+            pixel_position = (j, k)
+            if img[j][k] == 0:
                 if pixel_position in dict_pixel:
                     dict_pixel[pixel_position] += mask_label
                 else:
                     dict_pixel[pixel_position]  = mask_label
           
      
-print("dict_pixel")
-print(dict_pixel)
-position_data = []
-label_data = []
-
-for key, value in dict_pixel.items():
-    position_data.append(list(key))
-    label_data.append(value)
-
-position_data = np.asarray(position_data)
-label_data = np.asarray(label_data)
 
 
-pixel_x, pixel_y = position_data.T
-label_data = label_data.T
-
-
-result_gray_img = np.zeros((28,28,1), np.int8)
+result_gray_img = np.zeros((n,n,1), np.int8)
 for i in range(n):
     for j in range(n):
         pixel_pos = (i,j)
@@ -101,17 +90,17 @@ cv2.imwrite('./weighted_mask/weighted_mask_heatmap.png', result_heatmap)
 for i in range(len(mask_filenames)):
     img = cv2.imread(mask_filenames[i] ,0)
     mask_label = int(train_mask_labels[i])
-    for i in range(n):
-        for j in range(n):
+    for j in range(n):
+        for k in range(n):
             # If the mask make the correct prediction, then these pixels can be masked, each pixel mask has a label 0
             if mask_label == 1:
-                if img[i][j] == 0:
-                    train_x.append([i, j])
+                if img[j][k] == 0:
+                    train_x.append([j, k])
                     train_y.append(0)  
             # If the mask make the wrong prediciton, then these pixels cannot be masked, then each pixel mask has a label 1      
             elif mask_label == 0:
-                if img[i][j] == 0:
-                    train_x.append([i, j])
+                if img[j][k] == 0:
+                    train_x.append([j, k])
                     train_y.append(1) 
             else:
                 raise Exception("No such labels")
@@ -206,7 +195,7 @@ with gpytorch.beta_features.fast_pred_var():
 
 print("predictions.mean().cpu().data.numpy()")
 print(predictions.mean().cpu().data.numpy())
-org_test_gray_img = np.zeros((28,28))
+org_test_gray_img = np.zeros((n,n))
 
 for i in range(n):
     for j in range(n):
@@ -230,7 +219,7 @@ cv2.imwrite('./weighted_mask/pred_mask_heatmap.png', test_heatmap)
 
 
 
-org_img = cv2.imread('original_img_index15_label_1.png', 0)
+org_img = cv2.imread('original_img_index2_label_9.png', 0)
 
 
 final_masked_img = org_img * org_test_gray_img 
@@ -241,7 +230,7 @@ final_masked_img *= 255
 final_masked_img = np.array(final_masked_img, dtype = np.uint8)
 final_masked_img_color = cv2.cvtColor(final_masked_img, cv2.COLOR_GRAY2RGB)
 
-org_img_3channel = cv2.imread('original_img_index15_label_1.png')
+org_img_3channel = cv2.imread('original_img_index2_label_9.png')
 
 plt.subplot(141),plt.imshow(org_img_3channel,'gray'),plt.title('Original img')
 plt.subplot(142),plt.imshow(cv2.cvtColor(result_heatmap, cv2.COLOR_BGR2RGB),'jet'),plt.title('Summed label training heatmap')
