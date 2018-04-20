@@ -278,6 +278,9 @@ def plot_result(final_predictions):
     plt.subplot(143),plt.imshow(cv2.cvtColor(test_heatmap, cv2.COLOR_BGR2RGB),'gray'),plt.title('Predicted mask heatmap')
     plt.subplot(144),plt.imshow(cv2.cvtColor(final_masked_img_color, cv2.COLOR_BGR2RGB),'gray'),plt.title('Org_img with predicted mask')
 
+    plt.colorbar()
+    #plt.set_cmap('Reds')
+    plt.set_cmap('seismic')
     plt.show()
 
 
