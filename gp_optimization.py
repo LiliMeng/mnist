@@ -193,16 +193,11 @@ def eval_superpixel():
             output = F.log_softmax(pred0, dim=1)
             pred = output.data.max(1, keepdim=True)[1]
             
-            # print("prediction[0]")
-            # print(pred[0])
-            # print("ground truth target[0]")
-            # print(target[0])
+        
             probability_output = F.softmax(pred0, dim=1)
-            # print("probability_output")
-            # print(probability_output)
+       
             probability_score = probability_output.max(1, keepdim=True)[0]
-            # print("probability_score")
-            # print(probability_score.data)
+         
 
             correct_pred_count=0
             for i in range(1000):

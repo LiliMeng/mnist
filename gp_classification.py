@@ -81,15 +81,14 @@ def prepare_training_data():
 
     cv2.imwrite('./weighted_mask/weighted_mask.png', result_gray_img)
 
-
-    #cv2.imshow("result_img", result_gray_img)       
+     
     result_gray_img = np.array(result_gray_img, dtype = np.uint8)
     result_heatmap = cv2.applyColorMap(result_gray_img, cv2.COLORMAP_JET )
 
     cv2.imwrite('./weighted_mask/weighted_mask_heatmap.png', result_heatmap)
-    # cv2.imshow("result_heatmap", result_heatmap)
-    # cv2.waitKey()
-    # cv2.destroyAllWindows()
+    cv2.imshow("result_heatmap", result_heatmap)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
 
     for i in range(len(mask_filenames)):
         img = cv2.imread(mask_filenames[i] ,0)
